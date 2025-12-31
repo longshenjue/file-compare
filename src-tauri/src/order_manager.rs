@@ -4,6 +4,7 @@ use duckdb::{Connection, params, params_from_iter};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
+use log;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -40,15 +41,33 @@ pub struct OrderManager {
 impl OrderManager {
     pub fn new() -> Result<Self> {
         let orders_dir = dirs::data_dir()
-            .context("无法获取数据目录")?
+            .context("无法获取数据目录")
+            .map_err(|e| {
+                log::error!("Failed to get data directory: {}", e);
+                e
+            })?
             .join(".file-compare")
             .join("orders");
 
-        fs::create_dir_all(&orders_dir)?;
+        log::info!("Orders directory: {:?}", orders_dir);
+
+        fs::create_dir_all(&orders_dir)
+            .with_context(|| format!("Failed to create orders directory: {:?}", orders_dir))
+            .map_err(|e| {
+                log::error!("{}", e);
+                e
+            })?;
 
         // 创建持久化的 DuckDB 数据库
         let db_path = orders_dir.join("orders.duckdb");
-        let conn = Connection::open(&db_path)?;
+        log::info!("Opening database: {:?}", db_path);
+        
+        let conn = Connection::open(&db_path)
+            .with_context(|| format!("Failed to open database: {:?}", db_path))
+            .map_err(|e| {
+                log::error!("{}", e);
+                e
+            })?;
 
         // 初始化表结构
         conn.execute(
@@ -63,14 +82,24 @@ impl OrderManager {
                 data JSON NOT NULL
             )",
             [],
-        )?;
+        )
+        .context("Failed to create order_data table")
+        .map_err(|e| {
+            log::error!("{}", e);
+            e
+        })?;
 
         // 创建索引以优化查询
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_config_source_date 
              ON order_data(config_id, source_name, upload_date)",
             [],
-        )?;
+        )
+        .context("Failed to create index")
+        .map_err(|e| {
+            log::error!("{}", e);
+            e
+        })?;
 
         // 创建元数据表，记录上传历史
         conn.execute(
@@ -84,8 +113,14 @@ impl OrderManager {
                 record_count INTEGER NOT NULL
             )",
             [],
-        )?;
+        )
+        .context("Failed to create upload_metadata table")
+        .map_err(|e| {
+            log::error!("{}", e);
+            e
+        })?;
 
+        log::info!("OrderManager initialized successfully");
         Ok(Self { conn })
     }
 
@@ -177,13 +212,20 @@ impl OrderManager {
 
     /// 获取所有上传文件的元数据列表
     pub fn list_order_files(&self) -> Result<Vec<OrderFile>> {
+        log::info!("Listing order files from database");
+        
         let mut stmt = self.conn.prepare(
             "SELECT file_id, config_id, config_name, source_name, file_name, 
                     strftime(upload_time, '%Y-%m-%d %H:%M:%S') as upload_time_str, 
                     record_count 
              FROM upload_metadata 
              ORDER BY upload_time DESC",
-        )?;
+        )
+        .context("Failed to prepare list_order_files query")
+        .map_err(|e| {
+            log::error!("{}", e);
+            e
+        })?;
 
         let files = stmt
             .query_map([], |row| {
@@ -211,6 +253,9 @@ impl OrderManager {
         conditions: Vec<QueryCondition>,
         limit: Option<usize>,
     ) -> Result<Vec<HashMap<String, serde_json::Value>>> {
+        log::info!("Querying orders: config_id={:?}, source_name={:?}, conditions={}, limit={:?}",
+                   config_id, source_name, conditions.len(), limit);
+        
         // 构建基础查询
         let mut sql = String::from("SELECT data FROM order_data WHERE 1=1");
         let mut param_values: Vec<&str> = Vec::new();

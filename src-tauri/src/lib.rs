@@ -4,6 +4,7 @@ mod exporter;
 mod config_manager;
 mod task_manager;
 mod order_manager;
+mod logger;
 
 use models::*;
 use processor::DataProcessor;
@@ -31,8 +32,21 @@ fn reconcile(
     config_name: String,
     task_name: String,
 ) -> Result<(ReconciliationTask, ReconciliationResult), String> {
-    let processor = DataProcessor::new().map_err(|e| e.to_string())?;
-    let order_manager = OrderManager::new().map_err(|e| e.to_string())?;
+    log::info!("Starting reconciliation: task_name={}, config_id={}", task_name, config_id);
+    
+    let processor = DataProcessor::new()
+        .map_err(|e| {
+            let err_msg = format!("Failed to create DataProcessor: {}", e);
+            log::error!("{}", err_msg);
+            err_msg
+        })?;
+    
+    let order_manager = OrderManager::new()
+        .map_err(|e| {
+            let err_msg = format!("Failed to create OrderManager: {}", e);
+            log::error!("{}", err_msg);
+            err_msg
+        })?;
 
     // Step 1: 加载 CSV 文件并保存到 DuckDB
     processor
@@ -666,8 +680,22 @@ fn upload_order_file(
     header_row: usize,
     mappings: Vec<ColumnMapping>,
 ) -> Result<OrderFile, String> {
-    let processor = DataProcessor::new().map_err(|e| e.to_string())?;
-    let manager = OrderManager::new().map_err(|e| e.to_string())?;
+    log::info!("Uploading order file: file_name={}, config_id={}, source_name={}", 
+               file_name, config_id, source_name);
+    
+    let processor = DataProcessor::new()
+        .map_err(|e| {
+            let err_msg = format!("Failed to create DataProcessor: {}", e);
+            log::error!("{}", err_msg);
+            err_msg
+        })?;
+    
+    let manager = OrderManager::new()
+        .map_err(|e| {
+            let err_msg = format!("Failed to create OrderManager: {}", e);
+            log::error!("{}", err_msg);
+            err_msg
+        })?;
     
     // 加载并清洗数据
     let table_name = "temp_data";
@@ -700,8 +728,20 @@ fn upload_order_file(
 
 #[tauri::command]
 fn list_order_files() -> Result<Vec<OrderFile>, String> {
-    let manager = OrderManager::new().map_err(|e| e.to_string())?;
-    manager.list_order_files().map_err(|e| e.to_string())
+    log::info!("Listing order files");
+    let manager = OrderManager::new()
+        .map_err(|e| {
+            let err_msg = format!("Failed to create OrderManager: {}", e);
+            log::error!("{}", err_msg);
+            err_msg
+        })?;
+    
+    manager.list_order_files()
+        .map_err(|e| {
+            let err_msg = format!("Failed to list order files: {}", e);
+            log::error!("{}", err_msg);
+            err_msg
+        })
 }
 
 #[tauri::command]
@@ -711,7 +751,16 @@ fn query_orders(
     conditions: Vec<QueryCondition>,
     limit: Option<usize>,
 ) -> Result<Vec<std::collections::HashMap<String, serde_json::Value>>, String> {
-    let manager = OrderManager::new().map_err(|e| e.to_string())?;
+    log::info!("Querying orders: config_id={:?}, source_name={:?}, conditions_count={}, limit={:?}",
+               config_id, source_name, conditions.len(), limit);
+    
+    let manager = OrderManager::new()
+        .map_err(|e| {
+            let err_msg = format!("Failed to create OrderManager: {}", e);
+            log::error!("{}", err_msg);
+            err_msg
+        })?;
+    
     manager
         .query_orders(
             config_id.as_deref(),
@@ -719,7 +768,11 @@ fn query_orders(
             conditions,
             limit,
         )
-        .map_err(|e| e.to_string())
+        .map_err(|e| {
+            let err_msg = format!("Failed to query orders: {}", e);
+            log::error!("{}", err_msg);
+            err_msg
+        })
 }
 
 #[tauri::command]
@@ -764,6 +817,10 @@ fn reset_all_data() -> Result<(), String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // 初始化日志记录器
+    logger::init_logger();
+    log::info!("Application starting...");
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
@@ -791,6 +848,10 @@ pub fn run() {
             clear_all_orders,
             reset_all_data
         ])
+        .setup(|_app| {
+            log::info!("Tauri application setup completed");
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
