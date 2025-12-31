@@ -17,6 +17,8 @@
 ## 项目简介
 
 这是一个基于 **Tauri + Vue 3 + Rust + DuckDB** 构建的企业级对账引擎桌面应用。主要用于跨境支付场景下的账单对账，支持复杂的数据清洗、字段映射和状态归一化。
+<img width="1024" height="784" alt="image" src="https://github.com/user-attachments/assets/158df93e-fb55-4a0e-a284-acecba3d787c" />
+
 
 ### 核心特性
 
