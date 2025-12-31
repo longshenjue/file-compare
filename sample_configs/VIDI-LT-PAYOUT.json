@@ -1,0 +1,132 @@
+{
+  "id": "config-vidi-lt-payout",
+  "name": "VIDI-LT PAYOUT 渠道",
+  "sourceAName": "内部订单系统",
+  "sourceBName": "VIDI银行对账单",
+  "type": "PAYOUT",
+  "createdAt": "2025-12-30T10:00:00Z",
+  "updatedAt": "2025-12-30T10:00:00Z",
+  "sourceAConfig": {
+    "header": 1,
+    "timezone": "America/Sao_Paulo",
+    "removeDuplicate": true,
+    "mappings": [
+      {
+        "id": "mapping-order-1",
+        "sourceColumn": "transaction_date",
+        "fieldType": "OrderTime",
+        "fieldName": "sourceATime",
+        "ruleType": "ORDER_TIME_NORMAL",
+        "ruleConfig": "",
+        "saveOriginal": false,
+        "formatRules": []
+      },
+      {
+        "id": "mapping-order-2",
+        "sourceColumn": "e2e",
+        "fieldType": "OrderString",
+        "fieldName": "sourceAId",
+        "ruleType": "ORDER_STRING_NORMAL",
+        "ruleConfig": "",
+        "saveOriginal": true,
+        "formatRules": [
+          {
+            "type": "pre",
+            "operation": "DEL_AFTER",
+            "value": "7"
+          }
+        ]
+      },
+      {
+        "id": "mapping-order-3",
+        "sourceColumn": "status",
+        "fieldType": "OrderStatus",
+        "fieldName": "sourceAStatus",
+        "ruleType": "ORDER_STATUS_NORMAL",
+        "ruleConfig": "",
+        "saveOriginal": false,
+        "formatRules": []
+      },
+      {
+        "id": "mapping-order-4",
+        "sourceColumn": "amount",
+        "fieldType": "OrderAmount",
+        "fieldName": "sourceAAmount",
+        "ruleType": "ORDER_AMOUNT_NORMAL",
+        "ruleConfig": "",
+        "saveOriginal": false,
+        "formatRules": []
+      }
+    ]
+  },
+  "sourceBConfig": {
+    "header": 1,
+    "timezone": "America/Sao_Paulo",
+    "removeDuplicate": false,
+    "mappings": [
+      {
+        "id": "mapping-bank-1",
+        "sourceColumn": "date",
+        "fieldType": "OrderTime",
+        "fieldName": "sourceBTime",
+        "ruleType": "ORDER_TIME_NORMAL",
+        "ruleConfig": "",
+        "saveOriginal": false,
+        "formatRules": []
+      },
+      {
+        "id": "mapping-bank-2",
+        "sourceColumn": "e2eId",
+        "fieldType": "OrderString",
+        "fieldName": "sourceBId",
+        "ruleType": "ORDER_STRING_NORMAL",
+        "ruleConfig": "",
+        "saveOriginal": false,
+        "formatRules": []
+      },
+      {
+        "id": "mapping-bank-3",
+        "sourceColumn": "bank_status",
+        "fieldType": "OrderStatus",
+        "fieldName": "sourceBStatus",
+        "ruleType": "ORDER_STATUS_NORMAL",
+        "ruleConfig": "",
+        "saveOriginal": false,
+        "formatRules": []
+      },
+      {
+        "id": "mapping-bank-4",
+        "sourceColumn": "transaction_amount",
+        "fieldType": "OrderAmount",
+        "fieldName": "sourceBAmount",
+        "ruleType": "ORDER_AMOUNT_NORMAL",
+        "ruleConfig": "",
+        "saveOriginal": false,
+        "formatRules": []
+      }
+    ]
+  },
+  "matchConfig": {
+    "sourceAIdField": "sourceAId",
+    "sourceAStatusMapping": [
+      {
+        "sourceStatus": ["PAID", "COMPLETED", "SUCCESS"],
+        "targetStatus": "PAID"
+      },
+      {
+        "sourceStatus": ["REJECTED", "FAILED"],
+        "targetStatus": "REJECTED"
+      }
+    ],
+    "sourceBIdField": "sourceBId",
+    "sourceBStatusMapping": [
+      {
+        "sourceStatus": ["PAID", "SETTLED"],
+        "targetStatus": "PAID"
+      }
+    ],
+    "useHistoricalSourceA": false,
+    "useHistoricalSourceB": false,
+    "historyDays": 5
+  }
+}

@@ -1,0 +1,38 @@
+---
+alwaysApply: true
+---
+# Role: Senior Full-Stack Architect (Tauri + Rust + Vue)
+
+## Project Context
+- **Product**: A professional local-first reconciliation tool for cross-border payments.
+- **Core Logic**: Multi-step wizard to load, clean, and match two disparate datasets (Source A vs Source B) using DuckDB.
+- **Goal**: High-performance, secure, offline-ready, and highly abstract/configurable reconciliation engine.
+
+## Tech Stack Rules
+### 1. Tauri & Rust (Backend)
+- **Rust First**: Use Rust for all data processing, file I/O, and complex logic.
+- **Database**: Use `duckdb` with `bundled` features for all SQL operations. Prefer SQL over manual loops for data matching.
+- **Error Handling**: Use `Result<T, E>` and custom `Error` enums. Avoid `unwrap()`. All errors must be serializable to string for the frontend.
+- **Pattern**: Use the "Strategy Pattern" for data cleaning rules (e.g., DEL_AFTER, TO_TIMESTAMP) to ensure extensibility.
+- **Performance**: Large file processing must be done in separate threads or via DuckDB streaming to avoid blocking the main UI thread.
+
+### 2. Vue 3 & TypeScript (Frontend)
+- **UI Framework**: Vue 3 (Composition API) + Tailwind CSS + Shadcn UI (if available).
+- **Communication**: Use `@tauri-apps/api/core` for `invoke` calls.
+- **Strict Typing**: All data structures passed via IPC must have corresponding TypeScript Interfaces.
+- **State Management**: Keep the reconciliation configuration state reactive and synchronized across steps 1-4.
+
+### 3. Business Logic (Reconciliation)
+- **Mapping**: Implement flexible column mapping from raw file headers to internal fields: `OrderTime`, `OrderStatus`, `OrderString`, `OrderAmount`.
+- **Normalization**: Status codes from different sources must be mapped to a unified internal status enum.
+- **Joins**: Default reconciliation logic should be a `FULL OUTER JOIN` on the unique ID, followed by amount and status verification.
+
+## Coding Style & Standards
+- **Naming**: Rust (snake_case), TypeScript/Vue (camelCase), UI Components (PascalCase).
+- **Security**: Never implement any HTTP/Network calls unless explicitly requested. Data must remain local.
+- **Comments**: Document the "Why" for complex reconciliation algorithms, not just the "What".
+- **Modularity**: Separate the "Reconcile Engine" (Rust) from the "Tauri Command Wrappers".
+
+## Image Reference Guidance
+- Always refer to the uploaded UI screenshots for Step 1-4 layout.
+- Maintain the visual consistency: Main Theme Color (#10b981), Step-wise progress, and professional B-side UI feel.
